@@ -15,6 +15,7 @@ import java.util.Map;
 public final class WebViewFactory extends PlatformViewFactory {
   private final BinaryMessenger messenger;
   private final View containerView;
+  private  FlutterWebView flutterWebView;
 
   WebViewFactory(BinaryMessenger messenger, View containerView) {
     super(StandardMessageCodec.INSTANCE);
@@ -26,6 +27,11 @@ public final class WebViewFactory extends PlatformViewFactory {
   @Override
   public PlatformView create(Context context, int id, Object args) {
     Map<String, Object> params = (Map<String, Object>) args;
-    return new FlutterWebView(context, messenger, id, params, containerView);
+    flutterWebView = new FlutterWebView(context, messenger, id, params, containerView);
+    return flutterWebView;
+  }
+
+  public FlutterWebView getFlutterWebView() {
+    return flutterWebView;
   }
 }

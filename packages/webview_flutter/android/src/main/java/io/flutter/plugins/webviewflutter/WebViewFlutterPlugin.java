@@ -4,8 +4,16 @@
 
 package io.flutter.plugins.webviewflutter;
 
+import android.app.Activity;
+import android.content.Intent;
+
+import androidx.annotation.NonNull;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
+import io.flutter.plugin.common.PluginRegistry;
 
 /**
  * Java platform implementation of the webview_flutter plugin.
@@ -15,9 +23,12 @@ import io.flutter.plugin.common.BinaryMessenger;
  * <p>Call {@link #registerWith(Registrar)} to use the stable {@code io.flutter.plugin.common}
  * package instead.
  */
-public class WebViewFlutterPlugin implements FlutterPlugin {
+public class WebViewFlutterPlugin implements FlutterPlugin, PluginRegistry.ActivityResultListener , ActivityAware {
 
   private FlutterCookieManager flutterCookieManager;
+
+  public static Activity activity;
+  private WebViewFactory factory;
 
   /**
    * Add an instance of this to {@link io.flutter.embedding.engine.plugins.PluginRegistry} to
@@ -53,10 +64,11 @@ public class WebViewFlutterPlugin implements FlutterPlugin {
   @Override
   public void onAttachedToEngine(FlutterPluginBinding binding) {
     BinaryMessenger messenger = binding.getBinaryMessenger();
+    factory = new WebViewFactory(messenger, null);
     binding
         .getPlatformViewRegistry()
         .registerViewFactory(
-            "plugins.flutter.io/webview", new WebViewFactory(messenger, /*containerView=*/ null));
+            "plugins.flutter.io/webview", factory);
     flutterCookieManager = new FlutterCookieManager(messenger);
   }
 
@@ -68,5 +80,34 @@ public class WebViewFlutterPlugin implements FlutterPlugin {
 
     flutterCookieManager.dispose();
     flutterCookieManager = null;
+  }
+
+  @Override
+  public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+    activity=binding.getActivity();
+    binding.addActivityResultListener(this);
+  }
+
+  @Override
+  public void onDetachedFromActivityForConfigChanges() {
+
+  }
+
+  @Override
+  public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+
+  }
+
+  @Override
+  public void onDetachedFromActivity() {
+
+  }
+
+  @Override
+  public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (factory != null && factory.getFlutterWebView() != null){
+      return factory.getFlutterWebView().activityResult(requestCode,resultCode,data);
+    }
+    return false;
   }
 }

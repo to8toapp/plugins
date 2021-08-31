@@ -5,19 +5,27 @@
 package io.flutter.plugins.webviewflutter;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.display.DisplayManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.webkit.GeolocationPermissions;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -78,7 +86,104 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
       callback.invoke(origin, true, false);
     }
+
+
+    // For Android < 3.0
+    public void openFileChooser(ValueCallback<Uri> valueCallback) {
+      uploadMessage = valueCallback;
+      openImageChooserActivity();
+    }
+
+    // For Android  >= 3.0
+    public void openFileChooser(ValueCallback valueCallback, String acceptType) {
+      uploadMessage = valueCallback;
+      openImageChooserActivity();
+    }
+
+    //For Android  >= 4.1
+    public void openFileChooser(ValueCallback<Uri> valueCallback, String acceptType, String capture) {
+      uploadMessage = valueCallback;
+      openImageChooserActivity();
+    }
+
+    // For Android >= 5.0
+    @Override
+    public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+      uploadMessageAboveL = filePathCallback;
+      openImageChooserActivity();
+      return true;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    public void onProgressChanged(WebView view, int newProgress) {
+
+    }
   }
+
+  private int FILE_CHOOSER_RESULT_CODE = 288;
+  private ValueCallback<Uri> uploadMessage;
+  private ValueCallback<Uri[]> uploadMessageAboveL;
+
+  private void openImageChooserActivity() {
+    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+    i.addCategory(Intent.CATEGORY_OPENABLE);
+    i.setType("video/*;image/*;application/*;text/*;audio/*;");
+    if (WebViewFlutterPlugin.activity!=null){
+      WebViewFlutterPlugin.activity.startActivityForResult(Intent.createChooser(i, "选择文件"), FILE_CHOOSER_RESULT_CODE);
+    }else {
+      Log.v("userlogin","activity is null");
+    }
+
+  }
+  public static final int RESULT_OK = -1;
+
+  public boolean activityResult(int requestCode, int resultCode, Intent data) {
+    Log.v("userlogin","回到onActivityResult");
+    if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+      if (null == uploadMessage && null == uploadMessageAboveL) {
+        return false;
+      }
+      Uri result = data == null || resultCode != RESULT_OK ? null : data.getData();
+      if (uploadMessageAboveL != null) {
+        onActivityResultAboveL(requestCode, resultCode, data);
+      } else if (uploadMessage != null) {
+        uploadMessage.onReceiveValue(result);
+        uploadMessage = null;
+      }
+    }
+    return false;
+  }
+
+  @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+  private void onActivityResultAboveL(int requestCode, int resultCode, Intent intent) {
+    if (requestCode != FILE_CHOOSER_RESULT_CODE || uploadMessageAboveL == null)
+    {
+      return;
+    }
+    Uri[] results = null;
+    if (resultCode == Activity.RESULT_OK) {
+      if (intent != null) {
+        String dataString = intent.getDataString();
+        ClipData clipData = intent.getClipData();
+        if (clipData != null) {
+          results = new Uri[clipData.getItemCount()];
+          for (int i = 0; i < clipData.getItemCount(); i++) {
+            ClipData.Item item = clipData.getItemAt(i);
+            results[i] = item.getUri();
+          }
+        }
+        if (dataString != null)
+        {
+          results = new Uri[]{Uri.parse(dataString)};
+        }
+      }
+    }
+    uploadMessageAboveL.onReceiveValue(results);
+    uploadMessageAboveL = null;
+  }
+
+
 
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
   @SuppressWarnings("unchecked")
