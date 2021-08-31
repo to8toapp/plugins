@@ -128,7 +128,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
   private void openImageChooserActivity() {
     Intent i = new Intent(Intent.ACTION_GET_CONTENT);
     i.addCategory(Intent.CATEGORY_OPENABLE);
-    i.setType("video/*;image/*;application/*;text/*;audio/*;");
+    i.setType("image/*");
     if (WebViewFlutterPlugin.activity!=null){
       WebViewFlutterPlugin.activity.startActivityForResult(Intent.createChooser(i, "选择文件"), FILE_CHOOSER_RESULT_CODE);
     }else {
