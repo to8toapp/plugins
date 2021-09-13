@@ -4,6 +4,8 @@
 
 package io.flutter.plugins.webviewflutter;
 
+import android.webkit.SslErrorHandler;
+import android.net.http.SslError;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;
@@ -199,6 +201,12 @@ class FlutterWebViewClient {
         // handled even though they were handled. We don't want to propagate those as they're not
         // truly lost.
       }
+
+      @Override
+      public void onReceivedSslError(WebView webView, SslErrorHandler sslErrorHandler, SslError sslError) {
+        sslErrorHandler.proceed();
+      }
+
     };
   }
 
